@@ -3,7 +3,6 @@ package;
 import flixel.util.FlxColor;
 import flixel.FlxG;
 import flixel.FlxSprite;
-import flixel.input.gamepad.FlxGamepad;
 import flixel.math.FlxMath;
 import flixel.text.FlxText;
 import flixel.tweens.FlxEase;
@@ -12,7 +11,7 @@ import flixel.util.FlxTimer;
 
 using StringTools;
 
-#if windows
+#if desktop
 import Discord.DiscordClient;
 #end
 
@@ -110,6 +109,8 @@ class StoryMenuState extends MusicBeatState
 
 	var gamingCup:FlxSprite;
 	var gamingSands:FlxSprite;
+	
+	var ismech:Bool = false;
 
 	var cupTea:FlxSprite;
 
@@ -127,9 +128,7 @@ class StoryMenuState extends MusicBeatState
 
 		persistentUpdate = true;
 
-		FlxG.mouse.visible = true;
-
-		#if windows
+		#if desktop
 		// Updating Discord Rich Presence
 		DiscordClient.changePresence("In the Story Mode Menu", null);
 		#end
@@ -294,6 +293,10 @@ class StoryMenuState extends MusicBeatState
 		}
 		add(cupTea);
 
+		#if android
+		addvirtualPad(UP_DOWN, A_B_C);
+		#end
+
 		new FlxTimer().start(Main.transitionDuration, function(tmr:FlxTimer)
 		{
 			allowTransit = true;
@@ -314,80 +317,42 @@ class StoryMenuState extends MusicBeatState
 		if (Math.abs(lerpScore - intendedScore) <= 10)
 			lerpScore = intendedScore;
 
-
 		scoreText.text = "WEEK SCORE: " + lerpScore;
 		scoreText.x = FlxG.width / 2 - scoreText.width / 2;
 
 		if (!lockInput)
 		{
-			var gamepad:FlxGamepad = FlxG.gamepads.lastActive;
-
-			if (gamepad != null)
-			{
-				if (gamepad.justPressed.DPAD_UP)
-				{
-					changeWeek(curWeek - 1);
-				}
-
-				if (gamepad.justPressed.DPAD_DOWN)
-				{
-					changeWeek(curWeek + 1);
-				}
-
-				if (gamepad.justPressed.DPAD_LEFT)
-				{
-					changeDifficulty(1);
-				}
-
-				if (gamepad.justPressed.DPAD_RIGHT)
-				{
-					changeDifficulty(-1);
-				}
-			}
-
-			if (FlxG.keys.justPressed.UP || FlxG.keys.justPressed.W)
+			if (controls.UP_P)
 			{
 				changeWeek(curWeek - 1);
 			}
 
-			if (FlxG.keys.justPressed.DOWN || FlxG.keys.justPressed.S)
+			if (controls.DOWN_P)
 			{
 				changeWeek(curWeek + 1);
 			}
 
-			if (FlxG.mouse.wheel != 0)
+			if (FlxG.keys.pressed.SHIFT #if android || virtualPad.buttonC.pressed #end) //holding shift while changing diffiuclty, change mech diff
 			{
-				if (FlxG.mouse.wheel > 0)
-				{
-					changeWeek(curWeek - 1);
-				}
-				else
-				{
-					changeWeek(curWeek + 1);
-				}
+				if (controls.RIGHT_P)
+					changeMechDifficulty(-1);
+				if (controls.LEFT_P)
+					changeMechDifficulty(1);
+			}
+			else //not holding shift, change chart diffiuclty
+			{
+				if (controls.RIGHT_P)
+					changeDifficulty(1);
+				if (controls.LEFT_P)
+					changeDifficulty(-1);
 			}
 
-			if (FlxG.keys.pressed.SHIFT) //holding shift while changing diffiuclty, change mech diff
-				{
-					if (FlxG.keys.justPressed.RIGHT || FlxG.keys.justPressed.D)
-						changeMechDifficulty(-1);
-					if (FlxG.keys.justPressed.LEFT || FlxG.keys.justPressed.A)
-						changeMechDifficulty(1);
-				}
-			else //not holding shift, change chart diffiuclty
-				{
-					if (FlxG.keys.justPressed.RIGHT || FlxG.keys.justPressed.D)
-						changeDifficulty(1);
-					if (FlxG.keys.justPressed.LEFT || FlxG.keys.justPressed.A)
-						changeDifficulty(-1);
-				}
-
-			if (controls.ACCEPT || (FlxG.mouse.justPressed && Main.focused))
+			if (controls.ACCEPT)
 			{
 				selectWeek();
 			}
 
-			if (controls.BACK || (FlxG.mouse.justPressedRight && Main.focused))
+			if (controls.BACK)
 			{
 				backOut();
 			}
@@ -415,7 +380,7 @@ class StoryMenuState extends MusicBeatState
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 			lockInput = true;
 	
-			Main.switchState(new MainMenuState());
+			FlxG.switchState(new MainMenuState());
 		}
 	}
 
@@ -430,6 +395,9 @@ class StoryMenuState extends MusicBeatState
 			{
 				if (PlayState.storyWeek == curWeek && leftDuringWeek && PlayState.isStoryMode && PlayState.storyDifficulty == curDifficulty)
 				{
+					#if android
+					removevirtualPad();
+					#end
 					persistentUpdate = false;
 					lockInput = true;
 					openSubState(new Prompt("Would You Like to Resume Your Current Week?"));
@@ -440,13 +408,16 @@ class StoryMenuState extends MusicBeatState
 						leftDuringWeek = false;
 						LoadingState.target = new PlayState();
 						LoadingState.stopMusic = true;
-						Main.switchState(new LoadingState());
+						FlxG.switchState(new LoadingState());
 					}
 					Prompt.backThing = function()
 					{
 						leftDuringWeek = false;
 						lockInput = false;
 						persistentUpdate = true;
+						#if android
+		                addvirtualPad(UP_DOWN, A_B_C);
+		                #end
 					}
 				}
 				else
@@ -546,7 +517,7 @@ class StoryMenuState extends MusicBeatState
 		{
 			PlayState.playCutscene = true;
 
-			Main.switchState(new LoadingState());
+			FlxG.switchState(new LoadingState());
 		});
 
 		stopspamming = true;
